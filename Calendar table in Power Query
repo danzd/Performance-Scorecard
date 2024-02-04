@@ -1,0 +1,29 @@
+let
+    
+    StartDate = #date(2019, 1, 1),
+    EndDate = Date.EndOfYear(DateTime.Date(DateTime.FixedLocalNow())),
+    #"==Build Date Column==" = EndDate,
+    ListDates = List.Dates(StartDate, Number.From(EndDate - StartDate)+1, #duration(1,0,0,0)),
+    #"Converted to Table" = Table.FromList(ListDates, Splitter.SplitByNothing(), null, null, ExtraValues.Error),
+    #"Renamed Columns as Date" = Table.RenameColumns(#"Converted to Table",{{"Column1", "Date"}}),
+    
+    #"Changed Type to Date" = Table.TransformColumnTypes(#"Renamed Columns as Date",{{"Date", type date}}),
+    #"==Add Calendar Columns==" = #"Changed Type to Date",
+    #"Added Calendar MonthNum" = Table.AddColumn(#"==Add Calendar Columns==", "MonthNum", each Date.Month([Date]), Int64.Type),
+    #"Added Month Name" = Table.AddColumn(#"Added Calendar MonthNum", "Month", each Text.Start(Date.MonthName([Date]),3), type text),
+    #"Added Calendar Quarter" = Table.AddColumn(#"Added Month Name", "Quarter", each "Q" & Text.From(Date.QuarterOfYear([Date]))),
+    #"Added Calendar Year" = Table.AddColumn(#"Added Calendar Quarter", "Year", each Date.Year([Date]), Int64.Type),
+    #"Continue...Orig Table" = #"Added Calendar Year",
+    #"==Add General Columns==" = #"Continue...Orig Table",
+    #"Added WeekdayNum" = Table.AddColumn(#"==Add General Columns==", "WeekdayNum", each Date.DayOfWeek([Date]), Int64.Type),
+    #"Added Weekday Name" = Table.AddColumn(#"Added WeekdayNum", "Weekday", each Text.Start(Date.DayOfWeekName([Date]),3), type text),
+    #"Added WeekdayWeekend" = Table.AddColumn(#"Added Weekday Name", "WeekdayWeekend", each if [WeekdayNum] = 0 or [WeekdayNum] = 6
+then "Weekend"
+else "Weekday"),
+    #"==Improve Ultimate Table" = #"Added WeekdayWeekend",
+   
+    #"Inserted Week of Year" = Table.AddColumn(#"==Improve Ultimate Table", "Week of Year", each Date.WeekOfYear([Date]), Int64.Type),
+    #"Inserted Day" = Table.AddColumn(#"Inserted Week of Year", "Day", each Date.Day([Date]), Int64.Type),
+    #"Reordered Columns" = Table.ReorderColumns(#"Inserted Day",{"Date", "Year", "Quarter", "Month", "Day", "MonthNum", "Week of Year", "WeekdayNum", "Weekday", "WeekdayWeekend"})
+in
+    #"Reordered Columns"
